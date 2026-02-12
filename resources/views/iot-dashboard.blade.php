@@ -319,129 +319,106 @@
                     </div>
                 </div>
 
-                {{-- Modal de Historial de Lecturas --}}
-                <div x-show="showModal" 
-                     x-cloak
-                     @keydown.escape.window="showModal = false"
-                     class="fixed inset-0 z-50 overflow-y-auto" 
-                     role="dialog"
-                     aria-modal="true"
-                     aria-labelledby="modal-title"
-                     style="display: none;">
-                    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-                        {{-- Overlay --}}
-                        <div class="fixed inset-0 modal-backdrop bg-gray-900/60 dark:bg-black/70 transition-opacity" 
-                             @click="showModal = false"
-                             aria-hidden="true"></div>
+                {{-- Modal de Historial de Lecturas (teleported to body to escape card stacking context) --}}
+                <template x-teleport="body">
+                    <div x-show="showModal" 
+                         x-cloak
+                         @keydown.escape.window="showModal = false"
+                         class="fixed inset-0 z-50 overflow-y-auto" 
+                         style="display: none;">
+                        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+                            {{-- Overlay --}}
+                            <div class="fixed inset-0 bg-gray-900/60 dark:bg-black/70 transition-opacity" 
+                                 @click="showModal = false"></div>
 
-                        {{-- Modal content --}}
-                        <div class="relative inline-block w-full max-w-4xl p-0 my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-2xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50"
-                             x-ref="modalContent"
-                             x-transition:enter="transition ease-out duration-300"
-                             x-transition:enter-start="opacity-0 scale-95"
-                             x-transition:enter-end="opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-200"
-                             x-transition:leave-start="opacity-100 scale-100"
-                             x-transition:leave-end="opacity-0 scale-95">
-                            
-                            {{-- Modal Header --}}
-                            <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-cyan-400 rounded-xl flex items-center justify-center shadow-sm">
-                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                        </svg>
-                                    </div>
+                            {{-- Modal content --}}
+                            <div class="relative inline-block w-full max-w-4xl p-6 my-8 text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50"
+                                 x-transition:enter="transition ease-out duration-300"
+                                 x-transition:enter-start="opacity-0 scale-95"
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-200"
+                                 x-transition:leave-start="opacity-100 scale-100"
+                                 x-transition:leave-end="opacity-0 scale-95">
+                                
+                                <div class="flex justify-between items-start mb-4">
                                     <div>
-                                        <h3 id="modal-title" class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                            Historial de Lecturas — Última Hora
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                            Historial de Lecturas - Última Hora
                                         </h3>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" x-show="selectedDevice">
-                                            <span class="font-mono font-semibold text-indigo-600 dark:text-indigo-400" x-text="selectedDevice?.mac_address"></span>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" x-show="selectedDevice">
+                                            Dispositivo: <span class="font-mono font-semibold text-indigo-600 dark:text-indigo-400" x-text="selectedDevice?.mac_address"></span>
                                         </p>
                                     </div>
+                                    <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
                                 </div>
-                                <button @click="showModal = false" 
-                                        class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors" 
-                                        aria-label="Cerrar modal">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
-                            </div>
 
-                            <div class="p-6">
                                 {{-- Loading --}}
-                                <div x-show="loadingHistory" class="text-center py-12">
+                                <div x-show="loadingHistory" class="text-center py-8">
                                     <div class="w-10 h-10 mx-auto mb-3 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                                    <p class="text-sm text-gray-500">Cargando historial...</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">Cargando historial...</p>
                                 </div>
 
                                 {{-- Error en historial --}}
-                                <div x-show="historyError" x-cloak class="mb-4 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200/60 dark:border-red-800/40 rounded-xl">
+                                <div x-show="historyError" x-cloak class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl">
                                     <p class="text-sm text-red-700 dark:text-red-300" x-text="historyError"></p>
                                 </div>
 
                                 {{-- Tabla de lecturas --}}
                                 <div x-show="!loadingHistory && !historyError" class="overflow-x-auto max-h-96 custom-scrollbar rounded-xl border border-gray-200/60 dark:border-gray-700/50">
-                                    <table class="min-w-full divide-y divide-gray-200/60 dark:divide-gray-700/50">
-                                        <thead class="bg-gray-50/80 dark:bg-gray-800/80 sticky top-0">
+                                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead class="bg-gray-50 dark:bg-gray-800/80 sticky top-0">
                                             <tr>
-                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Timestamp</th>
-                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Gateway</th>
-                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Topic</th>
-                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider" style="min-width: 400px;">Datos del Tópico</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Timestamp</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Gateway</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Topic</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase" style="min-width: 400px;">Datos del Tópico</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                             <template x-for="reading in deviceReadings" :key="reading.id">
-                                                <tr class="table-row-hover">
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                                         <div x-text="reading.timestamp"></div>
-                                                        <div class="text-[10px] text-gray-400" x-text="reading.timestamp_human"></div>
+                                                        <div class="text-xs text-gray-400" x-text="reading.timestamp_human"></div>
                                                     </td>
-                                                    <td class="px-4 py-3 whitespace-nowrap text-xs font-mono text-gray-600 dark:text-gray-300" x-text="reading.gateway_mac"></td>
-                                                    <td class="px-4 py-3 whitespace-nowrap text-[11px] text-gray-500 dark:text-gray-400 font-mono" x-text="reading.topic"></td>
+                                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-300" x-text="reading.gateway_mac"></td>
+                                                    <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 font-mono" x-text="reading.topic"></td>
                                                     <td class="px-4 py-3 text-sm">
-                                                        <div class="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-200/60 dark:border-gray-700/50 font-mono text-[11px] text-gray-700 dark:text-gray-300 overflow-x-auto max-w-md">
+                                                        <div class="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-200/60 dark:border-gray-700/50 font-mono text-xs text-gray-700 dark:text-gray-300 overflow-x-auto max-w-md">
                                                             <pre x-text="JSON.stringify(reading.specific_data, null, 2)" class="whitespace-pre-wrap break-words"></pre>
                                                         </div>
                                                         <details class="mt-2">
-                                                            <summary class="text-[11px] text-indigo-600 dark:text-indigo-400 cursor-pointer hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">Ver raw_data</summary>
-                                                            <div class="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-200/60 dark:border-gray-700/50 font-mono text-[11px] text-gray-700 dark:text-gray-300 mt-1.5 overflow-x-auto max-w-md">
+                                                            <summary class="text-xs text-indigo-600 dark:text-indigo-400 cursor-pointer hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">Ver raw_data</summary>
+                                                            <div class="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-200/60 dark:border-gray-700/50 font-mono text-xs text-gray-700 dark:text-gray-300 mt-1.5 overflow-x-auto max-w-md">
                                                                 <pre x-text="typeof reading.raw_data === 'object' ? JSON.stringify(reading.raw_data, null, 2) : reading.raw_data" class="whitespace-pre-wrap break-words"></pre>
                                                             </div>
                                                         </details>
                                                     </td>
                                                 </tr>
                                             </template>
-                                        <template x-if="deviceReadings.length === 0 && !loadingHistory">
-                                            <tr>
-                                                <td colspan="4" class="px-4 py-12 text-center">
-                                                    <div class="flex flex-col items-center">
-                                                        <svg class="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                                        </svg>
-                                                        <p class="text-sm text-gray-500 dark:text-gray-400">No hay lecturas en la última hora</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
+                                            <template x-if="deviceReadings.length === 0 && !loadingHistory">
+                                                <tr>
+                                                    <td colspan="4" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                        No hay lecturas en la última hora para este dispositivo
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                            {{-- Total de lecturas --}}
-                            <div x-show="!loadingHistory && deviceReadings.length > 0" class="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-800">
-                                <span>Total: <span class="font-semibold text-gray-700 dark:text-gray-300" x-text="deviceReadings.length"></span> lecturas</span>
-                                <button @click="showModal = false" class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium transition-colors">
-                                    Cerrar
-                                </button>
-                            </div>
+                                {{-- Total de lecturas --}}
+                                <div x-show="!loadingHistory && deviceReadings.length > 0" class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                                    Total de lecturas: <span class="font-semibold text-gray-900 dark:text-gray-100" x-text="deviceReadings.length"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </template>
             </div>
 
             {{-- Bottom Section --}}
