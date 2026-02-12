@@ -23,7 +23,6 @@ class Device extends Model
         'status',
         'mac_address',
         'ip_address',
-        'parent_id',
         'metadata',
         'last_seen_at',
     ];
@@ -48,16 +47,16 @@ class Device extends Model
         return ['uuid'];
     }
 
-    // Relaciones de jerarquía
-    public function parent(): BelongsTo
-    {
-        return $this->belongsTo(Device::class, 'parent_id');
-    }
+    // Relaciones de jerarquía (parent_id removido en migración 2026_02_10_001114)
+    // public function parent(): BelongsTo
+    // {
+    //     return $this->belongsTo(Device::class, 'parent_id');
+    // }
 
-    public function children(): HasMany
-    {
-        return $this->hasMany(Device::class, 'parent_id');
-    }
+    // public function children(): HasMany
+    // {
+    //     return $this->hasMany(Device::class, 'parent_id');
+    // }
 
     // Scopes
     public function scopeOnline($query)

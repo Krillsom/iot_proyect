@@ -47,13 +47,6 @@ class AutoRegisterDeviceListener
         
         $sensorType = ($event->mqttType === 'iBeacon') ? SensorType::PROXIMITY : null;
         
-        // Obtener parent_id si es beacon
-        $parentId = null;
-        if ($event->mqttType === 'iBeacon' && $event->gatewayMac) {
-            $gateway = $this->repository->findByMacAddress($event->gatewayMac);
-            $parentId = $gateway?->uuid;
-        }
-        
         // Crear nuevo dispositivo
         $device = new Device([
             'uuid' => (string) Str::uuid(),
@@ -62,7 +55,6 @@ class AutoRegisterDeviceListener
             'sensor_type' => $sensorType,
             'status' => DeviceStatus::ONLINE,
             'mac_address' => $event->macAddress,
-            'parent_id' => $parentId,
             'metadata' => [
                 'source' => 'mqtt_auto_registered',
                 'original_mqtt_type' => $event->mqttType,

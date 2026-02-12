@@ -1,5 +1,14 @@
 // Alpine.js component para tabla de triangulación
 document.addEventListener('alpine:init', () => {
+    // Detectar base path automáticamente (para subdirectorios como /demo/)
+    const getBasePath = () => {
+        const path = window.location.pathname;
+        // Buscar si estamos en un subdirectorio (ej: /demo/dashboard -> /demo)
+        const match = path.match(/^(\/[^\/]+)\/(?:dashboard|api|login|register)/);
+        return match ? match[1] : '';
+    };
+    const basePath = getBasePath();
+
     Alpine.data('triangulationTable', () => ({
         devices: [],
         g1Active: false,
@@ -137,7 +146,7 @@ document.addEventListener('alpine:init', () => {
 
         async fetchData() {
             try {
-                const response = await fetch('/api/dashboard/triangulation', {
+                const response = await fetch(`${basePath}/api/dashboard/triangulation`, {
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
@@ -174,7 +183,7 @@ document.addEventListener('alpine:init', () => {
             this.historyError = null;
 
             try {
-                const response = await fetch(`/api/dashboard/device/${device.id}/readings`, {
+                const response = await fetch(`${basePath}/api/dashboard/device/${device.id}/readings`, {
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
