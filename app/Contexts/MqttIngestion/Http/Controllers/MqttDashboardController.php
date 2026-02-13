@@ -111,7 +111,7 @@ class MqttDashboardController
     public function triangulation()
     {
         // Cache de 3 segundos para reducir carga del servidor sin perder "real-time"
-        return Cache::remember('dashboard.triangulation', 3, function () {
+        $data = Cache::remember('dashboard.triangulation', 3, function () {
             $triangulationDevices = $this->triangulationQueryService->execute(new GetTriangulationDataQuery(24));
             
             // Estado de gateways
@@ -124,7 +124,7 @@ class MqttDashboardController
                 ->where('data_timestamp', '>=', now()->subMinutes(5))
                 ->exists();
 
-            return response()->json([
+            return [
                 'devices' => $triangulationDevices->map(function ($device) {
                     return [
                         'id' => $device->id,
@@ -136,11 +136,13 @@ class MqttDashboardController
                         'g2_last_seen_human' => $device->g2_last_seen?->diffForHumans(),
                         'last_seen_human' => $device->last_seen_at?->diffForHumans() ?? 'Nunca',
                     ];
-                }),
+                })->values()->toArray(),
                 'g1_active' => $g1Active,
                 'g2_active' => $g2Active,
-            ]);
+            ];
         });
+
+        return response()->json($data);
     }
 
     /**
