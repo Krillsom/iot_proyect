@@ -127,17 +127,21 @@ class MqttDashboardController
      */
     public function deviceReadings($deviceId)
     {
-        $readings = \App\Contexts\MqttIngestion\Domain\MqttReading::with('gateway')
-            ->where('device_id', $deviceId)
-            ->where('data_timestamp', '>=', now()->subHour())
-            ->orderBy('data_timestamp', 'desc')
+        // Optimizado: limitar a 50 lecturas y join manual para evitar loops
+        $readings = \App\Contexts\MqttIngestion\Domain\MqttReading::query()
+            ->select('mqtt_readings.*', 'devices.mac_address as gateway_mac')
+            ->leftJoin('devices', 'mqtt_readings.gateway_id', '=', 'devices.id')
+            ->where('mqtt_readings.device_id', $deviceId)
+            ->where('mqtt_readings.data_timestamp', '>=', now()->subHour())
+            ->orderBy('mqtt_readings.data_timestamp', 'desc')
+            ->limit(50)
             ->get()
             ->map(function ($reading) {
                 return [
                     'id' => $reading->id,
                     'topic' => $reading->topic,
                     'rssi' => $reading->specific_data['rssi'] ?? null,
-                    'gateway_mac' => $reading->gateway->mac_address ?? 'N/A',
+                    'gateway_mac' => $reading->gateway_mac ?? 'N/A',
                     'timestamp' => $reading->data_timestamp->format('Y-m-d H:i:s'),
                     'timestamp_human' => $reading->data_timestamp->diffForHumans(),
                     'raw_data' => $reading->raw_data,
