@@ -137,11 +137,13 @@ class MqttReadingRepositoryEloquent implements MqttReadingRepository
 
     public function getDevicesByGateway(): Collection
     {
+        // OPTIMIZADO: Solo contar registros recientes (últimas 24h)
         return DB::table('mqtt_readings')
             ->join('devices as gateways', 'mqtt_readings.gateway_id', '=', 'gateways.id')
             ->join('devices as beacons', 'mqtt_readings.device_id', '=', 'beacons.id')
             ->select('gateways.mac_address as gateway_mac', DB::raw('COUNT(DISTINCT mqtt_readings.device_id) as device_count'))
             ->where('beacons.sensor_type', 'proximity')
+            ->where('mqtt_readings.data_timestamp', '>=', now()->subHours(24)) // CRÍTICO: filtrar por fecha
             ->groupBy('gateways.mac_address')
             ->get();
     }
