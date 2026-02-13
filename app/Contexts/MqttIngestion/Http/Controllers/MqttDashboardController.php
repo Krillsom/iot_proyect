@@ -37,33 +37,33 @@ class MqttDashboardController
         
         $startTime = microtime(true);
         
-        // Cache de stats y datos pesados por 5 segundos
+        // Cache de stats y datos pesados - AUMENTADO a 30 segundos (los totales no cambian tan rápido)
         $t1 = microtime(true);
-        $stats = Cache::remember('dashboard.stats', 5, function () {
+        $stats = Cache::remember('dashboard.stats', 30, function () {
             return $this->statsQueryService->execute(new GetDashboardStatsQuery());
         });
         \Log::info('Stats: ' . round((microtime(true) - $t1) * 1000, 2) . 'ms');
         
         $t2 = microtime(true);
-        $activeDevices = Cache::remember('dashboard.active_devices', 5, function () {
+        $activeDevices = Cache::remember('dashboard.active_devices', 15, function () {
             return $this->activeDevicesQueryService->execute(new GetActiveDevicesQuery());
         });
         \Log::info('ActiveDevices: ' . round((microtime(true) - $t2) * 1000, 2) . 'ms');
         
         $t3 = microtime(true);
-        $recentReadings = Cache::remember('dashboard.recent_readings', 5, function () {
+        $recentReadings = Cache::remember('dashboard.recent_readings', 10, function () {
             return $this->recentReadingsQueryService->execute(new GetRecentReadingsQuery(20));
         });
         \Log::info('RecentReadings: ' . round((microtime(true) - $t3) * 1000, 2) . 'ms');
         
         $t4 = microtime(true);
-        $devicesByGateway = Cache::remember('dashboard.devices_by_gateway', 5, function () {
+        $devicesByGateway = Cache::remember('dashboard.devices_by_gateway', 20, function () {
             return $this->repository->getDevicesByGateway();
         });
         \Log::info('DevicesByGateway: ' . round((microtime(true) - $t4) * 1000, 2) . 'ms');
         
         $t5 = microtime(true);
-        $triangulationDevices = Cache::remember('dashboard.triangulation_devices', 5, function () {
+        $triangulationDevices = Cache::remember('dashboard.triangulation_devices', 15, function () {
             return $this->triangulationQueryService->execute(new GetTriangulationDataQuery(24));
         });
         \Log::info('TriangulationDevices: ' . round((microtime(true) - $t5) * 1000, 2) . 'ms');
@@ -133,8 +133,8 @@ class MqttDashboardController
      */
     public function triangulation()
     {
-        // Cache de 3 segundos para reducir carga del servidor sin perder "real-time"
-        $data = Cache::remember('dashboard.triangulation', 3, function () {
+        // Cache de 10 segundos para reducir carga del servidor
+        $data = Cache::remember('dashboard.triangulation', 10, function () {
             $triangulationDevices = $this->triangulationQueryService->execute(new GetTriangulationDataQuery(24));
             
             // Estado de gateways
