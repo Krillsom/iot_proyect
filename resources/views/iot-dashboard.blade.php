@@ -448,7 +448,7 @@
                                         <td class="px-5 py-3 whitespace-nowrap">
                                             <div class="flex items-center gap-2">
                                                 <div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
-                                                <span class="text-sm font-mono font-medium text-gray-900 dark:text-gray-100">{{ substr($reading->device->mac_address, -8) }}</span>
+                                                <span class="text-sm font-mono font-medium text-gray-900 dark:text-gray-100">{{ substr($reading->device_mac ?? 'N/A', -8) }}</span>
                                             </div>
                                         </td>
                                         <td class="px-5 py-3 whitespace-nowrap text-sm">
