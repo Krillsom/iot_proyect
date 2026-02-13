@@ -12,6 +12,7 @@ use App\Contexts\MqttIngestion\Domain\Queries\GetRecentReadingsQuery;
 use App\Contexts\MqttIngestion\Domain\Queries\GetTriangulationDataQuery;
 use App\Contexts\MqttIngestion\Domain\Repositories\MqttReadingRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class MqttDashboardController
@@ -92,34 +93,37 @@ class MqttDashboardController
      */
     public function triangulation()
     {
-        $triangulationDevices = $this->triangulationQueryService->execute(new GetTriangulationDataQuery(24));
-        
-        // Estado de gateways
-        $g1Active = DB::table('mqtt_readings')
-            ->where('topic', '/sur/g1/status')
-            ->where('data_timestamp', '>=', now()->subMinutes(5))
-            ->exists();
-        $g2Active = DB::table('mqtt_readings')
-            ->where('topic', '/sur/g2/status')
-            ->where('data_timestamp', '>=', now()->subMinutes(5))
-            ->exists();
+        // Cache de 3 segundos para reducir carga del servidor sin perder "real-time"
+        return Cache::remember('dashboard.triangulation', 3, function () {
+            $triangulationDevices = $this->triangulationQueryService->execute(new GetTriangulationDataQuery(24));
+            
+            // Estado de gateways
+            $g1Active = DB::table('mqtt_readings')
+                ->where('topic', '/sur/g1/status')
+                ->where('data_timestamp', '>=', now()->subMinutes(5))
+                ->exists();
+            $g2Active = DB::table('mqtt_readings')
+                ->where('topic', '/sur/g2/status')
+                ->where('data_timestamp', '>=', now()->subMinutes(5))
+                ->exists();
 
-        return response()->json([
-            'devices' => $triangulationDevices->map(function ($device) {
-                return [
-                    'id' => $device->id,
-                    'mac_address' => $device->mac_address,
-                    'name' => $device->name,
-                    'g1_rssi' => $device->g1_rssi,
-                    'g2_rssi' => $device->g2_rssi,
-                    'g1_last_seen_human' => $device->g1_last_seen?->diffForHumans(),
-                    'g2_last_seen_human' => $device->g2_last_seen?->diffForHumans(),
-                    'last_seen_human' => $device->last_seen_at?->diffForHumans() ?? 'Nunca',
-                ];
-            }),
-            'g1_active' => $g1Active,
-            'g2_active' => $g2Active,
-        ]);
+            return response()->json([
+                'devices' => $triangulationDevices->map(function ($device) {
+                    return [
+                        'id' => $device->id,
+                        'mac_address' => $device->mac_address,
+                        'name' => $device->name,
+                        'g1_rssi' => $device->g1_rssi,
+                        'g2_rssi' => $device->g2_rssi,
+                        'g1_last_seen_human' => $device->g1_last_seen?->diffForHumans(),
+                        'g2_last_seen_human' => $device->g2_last_seen?->diffForHumans(),
+                        'last_seen_human' => $device->last_seen_at?->diffForHumans() ?? 'Nunca',
+                    ];
+                }),
+                'g1_active' => $g1Active,
+                'g2_active' => $g2Active,
+            ]);
+        });
     }
 
     /**
