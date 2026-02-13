@@ -171,9 +171,9 @@ class MqttReadingRepositoryEloquent implements MqttReadingRepository
                 $join->on('mqtt_readings.id', '=', 'g1l.max_id');
             })
             ->select(
-                'device_id',
-                DB::raw('CAST(JSON_UNQUOTE(JSON_EXTRACT(specific_data, "$.rssi")) AS SIGNED) as g1_rssi'),
-                'data_timestamp as g1_last_seen'
+                'mqtt_readings.device_id',
+                DB::raw('CAST(JSON_UNQUOTE(JSON_EXTRACT(mqtt_readings.specific_data, "$.rssi")) AS SIGNED) as g1_rssi'),
+                'mqtt_readings.data_timestamp as g1_last_seen'
             )
             ->get()
             ->keyBy('device_id');
@@ -184,9 +184,9 @@ class MqttReadingRepositoryEloquent implements MqttReadingRepository
                 $join->on('mqtt_readings.id', '=', 'g2l.max_id');
             })
             ->select(
-                'device_id',
-                DB::raw('CAST(JSON_UNQUOTE(JSON_EXTRACT(specific_data, "$.rssi")) AS SIGNED) as g2_rssi'),
-                'data_timestamp as g2_last_seen'
+                'mqtt_readings.device_id',
+                DB::raw('CAST(JSON_UNQUOTE(JSON_EXTRACT(mqtt_readings.specific_data, "$.rssi")) AS SIGNED) as g2_rssi'),
+                'mqtt_readings.data_timestamp as g2_last_seen'
             )
             ->get()
             ->keyBy('device_id');
