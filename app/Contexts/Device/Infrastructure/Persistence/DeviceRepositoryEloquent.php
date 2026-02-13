@@ -27,64 +27,45 @@ class DeviceRepositoryEloquent implements DeviceRepository
 
     public function getAll(): Collection
     {
-        return Device::with('parent')->orderBy('created_at', 'desc')->get();
+        return Device::orderBy('created_at', 'desc')->get();
     }
 
     public function getByType(DeviceType $type): Collection
     {
-        return Device::byType($type)->with('parent')->get();
+        return Device::byType($type)->get();
     }
 
     public function getByStatus(DeviceStatus $status): Collection
     {
-        return Device::where('status', $status)->with('parent')->get();
+        return Device::where('status', $status)->get();
     }
 
     public function getOnline(): Collection
     {
-        return Device::online()->with('parent')->get();
+        return Device::online()->get();
     }
 
     public function getOffline(): Collection
     {
-        return Device::offline()->with('parent')->get();
+        return Device::offline()->get();
     }
 
+    // parent_id eliminado en migración 2026_02_10_001114
     public function getChildren(string $parentId): Collection
     {
-        $parent = $this->findByUuid($parentId);
-        
-        if (!$parent) {
-            return collect();
-        }
-
-        return Device::where('parent_id', $parent->uuid)->get();
+        return collect(); // Jerarquía deshabilitada
     }
 
+    // parent_id eliminado en migración 2026_02_10_001114
     public function getHierarchy(string $deviceId): array
     {
-        $device = $this->findByUuid($deviceId);
-
-        if (!$device) {
-            return [];
-        }
-
-        return [
-            'device' => $device,
-            'children' => $this->buildHierarchyTree($device),
-        ];
+        return []; // Jerarquía deshabilitada
     }
 
+    // parent_id eliminado en migración 2026_02_10_001114
     private function buildHierarchyTree(Device $device): Collection
     {
-        $children = Device::where('parent_id', $device->uuid)->get();
-
-        return $children->map(function ($child) {
-            return [
-                'device' => $child,
-                'children' => $this->buildHierarchyTree($child),
-            ];
-        });
+        return collect(); // Jerarquía deshabilitada
     }
 
     public function save(Device $device): Device
