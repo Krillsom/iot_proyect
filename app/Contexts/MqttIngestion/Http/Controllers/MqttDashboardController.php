@@ -30,41 +30,64 @@ class MqttDashboardController
      */
     public function index()
     {
+        // DEBUG: Log todas las queries con sus tiempos
+        DB::listen(function ($query) {
+            \Log::info('Query: ' . $query->sql . ' [' . $query->time . 'ms]');
+        });
+        
+        $startTime = microtime(true);
+        
         // Cache de stats y datos pesados por 5 segundos
+        $t1 = microtime(true);
         $stats = Cache::remember('dashboard.stats', 5, function () {
             return $this->statsQueryService->execute(new GetDashboardStatsQuery());
         });
+        \Log::info('Stats: ' . round((microtime(true) - $t1) * 1000, 2) . 'ms');
         
+        $t2 = microtime(true);
         $activeDevices = Cache::remember('dashboard.active_devices', 5, function () {
             return $this->activeDevicesQueryService->execute(new GetActiveDevicesQuery());
         });
+        \Log::info('ActiveDevices: ' . round((microtime(true) - $t2) * 1000, 2) . 'ms');
         
+        $t3 = microtime(true);
         $recentReadings = Cache::remember('dashboard.recent_readings', 5, function () {
             return $this->recentReadingsQueryService->execute(new GetRecentReadingsQuery(20));
         });
+        \Log::info('RecentReadings: ' . round((microtime(true) - $t3) * 1000, 2) . 'ms');
         
+        $t4 = microtime(true);
         $devicesByGateway = Cache::remember('dashboard.devices_by_gateway', 5, function () {
             return $this->repository->getDevicesByGateway();
         });
+        \Log::info('DevicesByGateway: ' . round((microtime(true) - $t4) * 1000, 2) . 'ms');
         
+        $t5 = microtime(true);
         $triangulationDevices = Cache::remember('dashboard.triangulation_devices', 5, function () {
             return $this->triangulationQueryService->execute(new GetTriangulationDataQuery(24));
         });
+        \Log::info('TriangulationDevices: ' . round((microtime(true) - $t5) * 1000, 2) . 'ms');
         
         // Estado de gateways (cache corto por ser más crítico)
+        $t6 = microtime(true);
         $g1Active = Cache::remember('dashboard.g1_active', 2, function () {
             return DB::table('mqtt_readings')
                 ->where('topic', '/sur/g1/status')
                 ->where('data_timestamp', '>=', now()->subMinutes(5))
                 ->exists();
         });
+        \Log::info('G1Active: ' . round((microtime(true) - $t6) * 1000, 2) . 'ms');
         
+        $t7 = microtime(true);
         $g2Active = Cache::remember('dashboard.g2_active', 2, function () {
             return DB::table('mqtt_readings')
                 ->where('topic', '/sur/g2/status')
                 ->where('data_timestamp', '>=', now()->subMinutes(5))
                 ->exists();
         });
+        \Log::info('G2Active: ' . round((microtime(true) - $t7) * 1000, 2) . 'ms');
+        
+        \Log::info('TOTAL index(): ' . round((microtime(true) - $startTime) * 1000, 2) . 'ms');
 
         return view('iot-dashboard', compact(
             'stats', 
