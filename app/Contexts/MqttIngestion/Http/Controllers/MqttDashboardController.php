@@ -30,24 +30,41 @@ class MqttDashboardController
      */
     public function index()
     {
-        // Usar CQRS para obtener datos
-        $stats = $this->statsQueryService->execute(new GetDashboardStatsQuery());
-        $activeDevices = $this->activeDevicesQueryService->execute(new GetActiveDevicesQuery());
-        $recentReadings = $this->recentReadingsQueryService->execute(new GetRecentReadingsQuery(20));
-        $devicesByGateway = $this->repository->getDevicesByGateway();
+        // Cache de stats y datos pesados por 5 segundos
+        $stats = Cache::remember('dashboard.stats', 5, function () {
+            return $this->statsQueryService->execute(new GetDashboardStatsQuery());
+        });
         
-        // Datos de triangulación (RSSI por gateway)
-        $triangulationDevices = $this->triangulationQueryService->execute(new GetTriangulationDataQuery(24));
+        $activeDevices = Cache::remember('dashboard.active_devices', 5, function () {
+            return $this->activeDevicesQueryService->execute(new GetActiveDevicesQuery());
+        });
         
-        // Estado de gateways
-        $g1Active = DB::table('mqtt_readings')
-            ->where('topic', '/sur/g1/status')
-            ->where('data_timestamp', '>=', now()->subMinutes(5))
-            ->exists();
-        $g2Active = DB::table('mqtt_readings')
-            ->where('topic', '/sur/g2/status')
-            ->where('data_timestamp', '>=', now()->subMinutes(5))
-            ->exists();
+        $recentReadings = Cache::remember('dashboard.recent_readings', 5, function () {
+            return $this->recentReadingsQueryService->execute(new GetRecentReadingsQuery(20));
+        });
+        
+        $devicesByGateway = Cache::remember('dashboard.devices_by_gateway', 5, function () {
+            return $this->repository->getDevicesByGateway();
+        });
+        
+        $triangulationDevices = Cache::remember('dashboard.triangulation_devices', 5, function () {
+            return $this->triangulationQueryService->execute(new GetTriangulationDataQuery(24));
+        });
+        
+        // Estado de gateways (cache corto por ser más crítico)
+        $g1Active = Cache::remember('dashboard.g1_active', 2, function () {
+            return DB::table('mqtt_readings')
+                ->where('topic', '/sur/g1/status')
+                ->where('data_timestamp', '>=', now()->subMinutes(5))
+                ->exists();
+        });
+        
+        $g2Active = Cache::remember('dashboard.g2_active', 2, function () {
+            return DB::table('mqtt_readings')
+                ->where('topic', '/sur/g2/status')
+                ->where('data_timestamp', '>=', now()->subMinutes(5))
+                ->exists();
+        });
 
         return view('iot-dashboard', compact(
             'stats', 
