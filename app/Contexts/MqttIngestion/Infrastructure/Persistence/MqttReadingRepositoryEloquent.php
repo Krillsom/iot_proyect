@@ -97,12 +97,16 @@ class MqttReadingRepositoryEloquent implements MqttReadingRepository
 
     public function getDashboardStats(): array
     {
+        // Usar whereBetween en lugar de whereDate para aprovechar índices
+        $todayStart = today()->startOfDay();
+        $todayEnd = today()->endOfDay();
+        
         return [
             'total_readings' => MqttReading::count(),
             'total_devices' => DB::table('devices')->count(),
             'total_beacons' => DB::table('devices')->where('type', '!=', 'gateway')->count(),
             'total_gateways' => DB::table('devices')->where('type', 'gateway')->count(),
-            'readings_today' => MqttReading::whereDate('data_timestamp', today())->count(),
+            'readings_today' => MqttReading::whereBetween('data_timestamp', [$todayStart, $todayEnd])->count(),
             'readings_last_hour' => MqttReading::where('data_timestamp', '>=', now()->subHour())->count(),
         ];
     }
@@ -137,15 +141,31 @@ class MqttReadingRepositoryEloquent implements MqttReadingRepository
 
     public function getDevicesByGateway(): Collection
     {
-        // OPTIMIZADO: Solo contar registros recientes (últimas 24h)
-        return DB::table('mqtt_readings')
-            ->join('devices as gateways', 'mqtt_readings.gateway_id', '=', 'gateways.id')
-            ->join('devices as beacons', 'mqtt_readings.device_id', '=', 'beacons.id')
-            ->select('gateways.mac_address as gateway_mac', DB::raw('COUNT(DISTINCT mqtt_readings.device_id) as device_count'))
-            ->where('beacons.sensor_type', 'proximity')
-            ->where('mqtt_readings.data_timestamp', '>=', now()->subHours(24)) // CRÍTICO: filtrar por fecha
-            ->groupBy('gateways.mac_address')
-            ->get();
+        // ULTRA OPTIMIZADO: Primero obtener gateway_ids de tipo gateway, luego contar
+        $gatewayIds = DB::table('devices')
+            ->where('type', 'gateway')
+            ->pluck('id', 'mac_address');
+        
+        if ($gatewayIds->isEmpty()) {
+            return collect();
+        }
+        
+        // Contar devices por gateway usando solo índices
+        $counts = DB::table('mqtt_readings')
+            ->select('gateway_id', DB::raw('COUNT(DISTINCT device_id) as device_count'))
+            ->whereIn('gateway_id', $gatewayIds->values())
+            ->where('data_timestamp', '>=', now()->subHours(24))
+            ->groupBy('gateway_id')
+            ->get()
+            ->keyBy('gateway_id');
+        
+        // Mapear IDs a MACs y retornar como objetos
+        return $gatewayIds->map(function ($gatewayId, $mac) use ($counts) {
+            return (object) [
+                'gateway_mac' => $mac,
+                'device_count' => $counts->get($gatewayId)?->device_count ?? 0,
+            ];
+        })->values();
     }
 
     public function getTriangulationData(int $hoursLimit = 24): Collection
