@@ -22,15 +22,27 @@ class MqttReadingRepositoryEloquent implements MqttReadingRepository
 
     public function getActiveDevices(int $hoursLimit = 24): Collection
     {
-        return MqttReading::with(['device', 'gateway'])
-            ->select('mqtt_readings.*', DB::raw('MAX(data_timestamp) as last_seen'))
-            ->where('data_timestamp', '>=', now()->subHours($hoursLimit))
-            ->groupBy('device_id', 'gateway_id', 'mqtt_readings.id', 'topic', 'specific_data', 'raw_data', 'data_timestamp', 'mqtt_readings.created_at', 'mqtt_readings.updated_at')
+        // Optimizado: usar joins en lugar de with() para evitar memory exhaustion
+        return DB::table('mqtt_readings')
+            ->select(
+                'mqtt_readings.*',
+                'devices.mac_address as device_mac',
+                'devices.name as device_name',
+                'gw.mac_address as gateway_mac',
+                DB::raw('MAX(mqtt_readings.data_timestamp) as last_seen')
+            )
+            ->leftJoin('devices', 'mqtt_readings.device_id', '=', 'devices.id')
+            ->leftJoin('devices as gw', 'mqtt_readings.gateway_id', '=', 'gw.id')
+            ->where('mqtt_readings.data_timestamp', '>=', now()->subHours($hoursLimit))
+            ->groupBy('mqtt_readings.device_id', 'mqtt_readings.gateway_id', 'mqtt_readings.id', 'mqtt_readings.topic', 'mqtt_readings.specific_data', 'mqtt_readings.raw_data', 'mqtt_readings.data_timestamp', 'mqtt_readings.created_at', 'mqtt_readings.updated_at', 'devices.mac_address', 'devices.name', 'gw.mac_address')
             ->orderBy('last_seen', 'desc')
+            ->limit(100)
             ->get()
             ->map(function ($reading) {
-                // Convertir last_seen de string a Carbon
                 $reading->last_seen = \Carbon\Carbon::parse($reading->last_seen);
+                $reading->data_timestamp = \Carbon\Carbon::parse($reading->data_timestamp);
+                $reading->specific_data = json_decode($reading->specific_data, true);
+                $reading->raw_data = json_decode($reading->raw_data, true);
                 return $reading;
             });
     }
@@ -44,19 +56,38 @@ class MqttReadingRepositoryEloquent implements MqttReadingRepository
             return collect();
         }
 
-        return MqttReading::with(['device', 'gateway'])
-            ->where('gateway_id', $gatewayId)
-            ->orderBy('data_timestamp', 'desc')
+        // Optimizado: usar joins en lugar de with()
+        return DB::table('mqtt_readings')
+            ->select('mqtt_readings.*', 'devices.mac_address as device_mac', 'devices.name as device_name')
+            ->leftJoin('devices', 'mqtt_readings.device_id', '=', 'devices.id')
+            ->where('mqtt_readings.gateway_id', $gatewayId)
+            ->orderBy('mqtt_readings.data_timestamp', 'desc')
             ->limit($limit)
-            ->get();
+            ->get()
+            ->map(function ($reading) {
+                $reading->data_timestamp = \Carbon\Carbon::parse($reading->data_timestamp);
+                $reading->specific_data = json_decode($reading->specific_data, true);
+                $reading->raw_data = json_decode($reading->raw_data, true);
+                return $reading;
+            });
     }
 
     public function getRecentReadings(int $limit = 20): Collection
     {
-        return MqttReading::with(['device', 'gateway'])
-            ->orderBy('data_timestamp', 'desc')
+        // Optimizado: usar joins en lugar de with()
+        return DB::table('mqtt_readings')
+            ->select('mqtt_readings.*', 'devices.mac_address as device_mac', 'devices.name as device_name', 'gw.mac_address as gateway_mac')
+            ->leftJoin('devices', 'mqtt_readings.device_id', '=', 'devices.id')
+            ->leftJoin('devices as gw', 'mqtt_readings.gateway_id', '=', 'gw.id')
+            ->orderBy('mqtt_readings.data_timestamp', 'desc')
             ->limit($limit)
-            ->get();
+            ->get()
+            ->map(function ($reading) {
+                $reading->data_timestamp = \Carbon\Carbon::parse($reading->data_timestamp);
+                $reading->specific_data = json_decode($reading->specific_data, true);
+                $reading->raw_data = json_decode($reading->raw_data, true);
+                return $reading;
+            });
     }
 
     public function getDashboardStats(): array
